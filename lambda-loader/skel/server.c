@@ -23,11 +23,12 @@
 #endif
 
 int output_fd;
-char name[MAX_SIZE];
-char func[MAX_SIZE];
-char params[MAX_SIZE];
-char output_file[MAX_SIZE];
-char message[MAX_SIZE];
+
+char libname[MAX_SIZE];
+char funcname[MAX_SIZE];
+char filename[MAX_SIZE];
+char output_file_name[MAX_SIZE];
+char error_msg[MAX_SIZE];
 
 void dealloc(struct lib *lib)
 {
@@ -41,41 +42,41 @@ static int lib_prehooks(struct lib *lib)
 {
 	lib->outputfile = strdup(OUTPUTFILE_TEMPLATE);
 	if (!lib->outputfile) {
-		perror("strdup failed\n");
+		perror("strdup");
 		return -1;
 	}
 
 	output_fd = mkstemp(lib->outputfile);
 	dup2(output_fd, 1);
-	strcpy(output_file, lib->outputfile);
+	strcpy(output_file_name, lib->outputfile);
 
 	lib->libname = malloc(MAX_SIZE);
 	if (!lib->libname) {
-		perror("malloc failed\n");
+		perror("malloc");
 		return -1;
 	}
 
 	strcpy(lib->libname, "../checker/");
-	strcat(lib->libname, name);
+	strcat(lib->libname, libname);
 
-	if (*func) {
-		lib->funcname = strdup(func);
+	if (*funcname) {
+		lib->funcname = strdup(funcname);
 	}
 	else {
 		lib->funcname = strdup(RUN_FUNC);
 	}
 	
 	if (!lib->funcname) {
-		perror("strdup failed\n");
+		perror("strdup");
 		return -1;
 	}
 
 	lib->filename = NULL;
 
-	if (*params) {
-		lib->filename = strdup(params);
+	if (*filename) {
+		lib->filename = strdup(filename);
 		if (!lib->filename) {
-			perror("strdup failed");
+			perror("strdup");
 			return -1;
 		}
 	}
@@ -88,7 +89,7 @@ static int lib_load(struct lib *lib)
 	lib->handle = dlopen(lib->libname, RTLD_LAZY);
 
 	if (!lib->handle) {
-		perror("dlopen failed");
+		perror("dlopen");
 		dealloc(lib);
 		return -1;
 	}
@@ -101,7 +102,7 @@ static int lib_execute(struct lib *lib)
 	if (!lib->filename) {
 		lib->run = (lambda_func_t) dlsym(lib->handle, lib->funcname);
 		if (!lib->run) {
-			perror("dlsym failed");
+			perror("dlsym");
 			return -1;
 		}
 		lib->run();
@@ -109,7 +110,7 @@ static int lib_execute(struct lib *lib)
 	else {
 		lib->p_run = (lambda_param_func_t) dlsym(lib->handle, lib->funcname);
 		if (!lib->p_run) {
-			perror("dlsym failed\n");
+			perror("dlsym");
 			return -1;
 		}
 		lib->p_run(lib->filename);
@@ -207,21 +208,21 @@ int main(void)
 	printf("Received message: %s\n", buffer);
 
 	/* TODO - parse message with parse_command and populate lib */
-	argv = parse_command(buffer, name, func, params);
+	argv = parse_command(buffer, libname, funcname, filename);
 
 	/* TODO - handle request from client */
 	ret = lib_run(&lib);
 
 	if (ret == -1) {
-		strcpy(message, "Error: ");
-		strcat(message, buffer);
-		strcat(message, " could not be executed.");
+		strcpy(error_msg, "Error: ");
+		strcat(error_msg, buffer);
+		strcat(error_msg, " could not be executed.");
 		
-		printf("%s\n", message);
+		printf("%s\n", error_msg);
 		close(output_fd);
 	}
 
-	ret = send_socket(socket_client, output_file, MAX_SIZE);
+	ret = send_socket(socket_client, output_file_name, MAX_SIZE);
 	if (ret == -1) {
 		perror("send");
 		exit(1);
