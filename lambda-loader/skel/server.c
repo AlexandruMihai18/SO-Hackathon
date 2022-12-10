@@ -22,28 +22,100 @@
 #define MAX_SIZE 256
 #endif
 
+#ifndef RUN_FUNC
+#define RUN_FUNC "run"
+#endif
+
+char name[MAX_SIZE];
+char func[MAX_SIZE];
+char params[MAX_SIZE];
+char message[MAX_SIZE];
+
 static int lib_prehooks(struct lib *lib)
 {
+	int fd = mkstemp(OUTPUTFILE_TEMPLATE);
+	
+	lib->outputfile = malloc(MAX_SIZE);
+	if (!lib->outputfile) {
+		perror("outputfile malloc failed\n");
+		return -1;
+	}
+
+	int ret;
+	ret = fcntl(fd, F_GETFD, lib->outputfile);
+	if (ret == -1) {
+		perror("fcntl failed\n");
+		return -1;
+	}
+
+	close(fd);
+
+	lib->libname = malloc(MAX_SIZE);
+	strcpy(lib->libname, name);
+
+	lib->funcname = malloc(MAX_SIZE);
+	if (func)
+		strcpy(lib->funcname, func);
+	else
+		strcpy(lib->funcname, RUN_FUNC);	
+
+	if (params) {
+		lib->filename = malloc(MAX_SIZE);
+		strcpy(lib->filename, params);
+	}
+	else
+		lib->filename = NULL;
+
 	return 0;
 }
 
 static int lib_load(struct lib *lib)
 {
+	lib->handle = dlopen(lib->libname, RTLD_LAZY);
+	if (lib->handle) {
+		perror("dlopen failed\n");
+		return -1;
+	}
+
 	return 0;
 }
 
 static int lib_execute(struct lib *lib)
 {
+	int fd = open(lib->outputfile, O_RDWR);
+
+	if (!lib->filename) {
+		lib->run = (void (*)(void)) dlsym(lib->handle, lib->funcname);
+		lib->run();
+		write(fd, lib->funcname, MAX_SIZE);
+	}
+	else {
+		lib->p_run = (void (*)(const char *)) dlsym(lib->handle, lib->funcname);
+		lib->p_run(lib->filename);
+	}
+
+	close(fd);
 	return 0;
 }
 
 static int lib_close(struct lib *lib)
 {
+	int ret = dlclose(lib->handle);
+	if (ret) {
+		return -1;
+	}
 	return 0;
 }
 
 static int lib_posthooks(struct lib *lib)
 {
+	strcpy(message, lib->outputfile);
+	
+	free(lib->libname);
+	free(lib->funcname);
+	free(lib->filename);
+	free(lib->outputfile);
+	
 	return 0;
 }
 
@@ -96,14 +168,10 @@ int main(void)
 	}
 
 	char buffer[MAX_SIZE];
-	char name[MAX_SIZE];
-	char func[MAX_SIZE];
-	char params[MAX_SIZE];
-	char message[MAX_SIZE];
 
 	int argv;
 
-	while(1) {
+	while (1) {
 
 		/* TODO - get message from client */
 		ret = recv_socket(socket_client, buffer, MAX_SIZE);
@@ -117,7 +185,7 @@ int main(void)
 
 		/* TODO - handle request from client */
 		ret = lib_run(&lib);
-		strcpy(message, ERROR_MSG);
+		
 
 		ret = send_socket(socket_client, message, MAX_SIZE);
 		if (ret == -1) {
