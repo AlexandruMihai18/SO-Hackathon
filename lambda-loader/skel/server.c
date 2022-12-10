@@ -89,7 +89,7 @@ int main(void)
 		exit(1);
 	}
 
-	socket_client = connect_socket(socket_fd);
+	socket_client = accept_socket(socket_fd);
 	if (socket_client == -1) {
 		perror("accept");
 		exit(1);

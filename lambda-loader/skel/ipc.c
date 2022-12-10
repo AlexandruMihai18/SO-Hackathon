@@ -10,18 +10,19 @@
 
 #include "ipc.h"
 
-static struct sockaddr_in addr;
+static int addrlen = sizeof(struct sockaddr);
+static struct sockaddr_in serv_addr;
 static struct sockaddr cli_addr;
 static unsigned short port = 4242;
 
 int create_socket()
 {
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	addr.sin_addr.s_addr = INADDR_ANY;
-	int ret = bind(fd, (struct sockaddr*)&addr, sizeof(addr));
+	memset(&serv_addr, 0, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(port);
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	int ret = bind(fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
 	if (ret < 0) {
 		return -1;
 	}
@@ -30,10 +31,12 @@ int create_socket()
 
 int connect_socket(int fd)
 {
+	return connect(fd, &serv_addr, &addrlen);
+}
+
+int accept_socket(int fd) {
 	listen(fd, 5);
-	int addrlen = sizeof(struct sockaddr);
 	return accept(fd, &cli_addr, &addrlen);
-	
 }
 
 ssize_t send_socket(int fd, const char *buf, size_t len)
