@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/socket.h>
 
 #include "ipc.h"
 #include "server.h"
@@ -103,40 +104,47 @@ int main(void)
 
 	int argv;
 	(void)argv;
-
-	while(1) {
-
-		/* TODO - get message from client */
+	
+	// listen for messages from client and create fork upon receiving request
+	while (1) {
 		socket_client = accept_socket(socket_fd);
-		if (socket_client == -1) {
-			perror("accept");
-			exit(1);
+		printf("Connection request received...\n");
+		int pid = fork();
+		if (pid > 0) {
+			printf("Created a fork\n");
+		} else {
+			printf("Message from fork\n");
 		}
-
-		ret = recv_socket(socket_client, buffer, MAX_SIZE);
-		if (ret == -1) {
-			perror("recv");
-			exit(1);
-		}
-
-		printf("Received message: %s\n", buffer);
-
-		/* TODO - parse message with parse_command and populate lib */
-		argv = parse_command(buffer, name, func, params);
-
-		/* TODO - handle request from client */
-		ret = lib_run(&lib);
-		// strcpy(message, ERROR_MSG);
-		strcpy(message, "Error: ");
-		strcat(message, buffer);
-		strcat(message, " could not be executed");
-
-		ret = send_socket(socket_client, message, MAX_SIZE);
-		if (ret == -1) {
-			perror("send");
-			exit(1);
+		if (pid == 0) {
+			break;
 		}
 	}
+
+	ret = recv_socket(socket_client, buffer, MAX_SIZE);
+	if (ret == -1) {
+		perror("recv");
+		exit(1);
+	}
+
+	printf("Received message: %s\n", buffer);
+
+	/* TODO - parse message with parse_command and populate lib */
+	argv = parse_command(buffer, name, func, params);
+
+	/* TODO - handle request from client */
+	ret = lib_run(&lib);
+	// strcpy(message, ERROR_MSG);
+	strcpy(message, "Error: ");
+	strcat(message, buffer);
+	strcat(message, " could not be executed");
+
+	ret = send_socket(socket_client, message, MAX_SIZE);
+	if (ret == -1) {
+		perror("send");
+		exit(1);
+	}
+
+	printf("Goodbye from fork!\n");
 
 	return 0;
 }
