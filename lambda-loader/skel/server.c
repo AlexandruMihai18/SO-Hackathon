@@ -83,11 +83,13 @@ int main(void)
 	int socket_client;
 
 	/* TODO - Implement server connection */
-	int socket_fd = create_socket();
+	int socket_fd = create_server();
 	if (socket_fd == -1) {
 		perror("socket");
 		exit(1);
 	}
+
+	printf("%d\n", socket_fd);
 
 	socket_client = accept_socket(socket_fd);
 	if (socket_client == -1) {
@@ -111,6 +113,8 @@ int main(void)
 			perror("recv");
 			exit(1);
 		}
+
+		printf("Received message: %s\n", buffer);
 
 		/* TODO - parse message with parse_command and populate lib */
 		argv = parse_command(buffer, name, func, params);
