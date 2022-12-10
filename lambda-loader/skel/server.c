@@ -14,6 +14,10 @@
 #define OUTPUTFILE_TEMPLATE "../checker/output/out-XXXXXX"
 #endif
 
+#ifndef ERROR_MSG
+#define ERROR_MSG "Error: command could not be executed"
+#endif
+
 #ifndef MAX_SIZE
 #define MAX_SIZE 256
 #endif
@@ -113,6 +117,7 @@ int main(void)
 
 		/* TODO - handle request from client */
 		ret = lib_run(&lib);
+		strcpy(message, ERROR_MSG);
 
 		ret = send_socket(socket_client, message, MAX_SIZE);
 		if (ret == -1) {
