@@ -22,6 +22,12 @@
 #define RUN_FUNC "run"
 #endif
 
+#ifndef CONFIG_PATH
+#define CONFIG_PATH "config.txt"
+#endif
+
+int max_clients = 0;
+
 int output_fd;
 char name[MAX_SIZE];
 char func[MAX_SIZE];
@@ -166,12 +172,33 @@ static int parse_command(const char *buf, char *name, char *func, char *params)
 	return sscanf(buf, "%s %s %s", name, func, params);
 }
 
+void init_server() {
+	char setting[64], value[64];
+	char line[128];
+	FILE *fd = fopen(CONFIG_PATH, "r");
+	while (fgets(line, 128, fd)) {
+		sscanf(line, "%s %s", setting, value);
+		if (!strcmp(setting, "MAX_CLIENTS")) {
+			max_clients = atoi(value);
+		}
+	}
+
+	fclose(fd);
+
+	if (!max_clients) {
+		max_clients = MAX_CLIENTS;
+	}
+}
+
 int main(void)
 {
 	int ret;
 	struct lib lib;
 
 	int socket_client;
+
+	// load environment variables from config.txt
+	init_server();
 
 	/* TODO - Implement server connection */
 	int socket_fd = create_server();
@@ -186,14 +213,8 @@ int main(void)
 	(void)argv;
 	// listen for messages from client and create fork upon receiving request
 	while (1) {
-		socket_client = accept_socket(socket_fd);
-		printf("Connection request received...\n");
+		socket_client = accept_socket(socket_fd, max_clients);
 		int pid = fork();
-		if (pid > 0) {
-			printf("Created a fork\n");
-		} else {
-			printf("Message from fork\n");
-		}
 		if (pid == 0) {
 			break;
 		}
@@ -204,8 +225,6 @@ int main(void)
 		perror("recv");
 		exit(1);
 	}
-
-	printf("Received message: %s\n", buffer);
 
 	/* TODO - parse message with parse_command and populate lib */
 	argv = parse_command(buffer, name, func, params);

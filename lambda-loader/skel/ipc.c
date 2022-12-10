@@ -10,8 +10,8 @@
 
 #define SOCKET_PATH "/tmp/mysocket"
 
-static unsigned int addrlen = sizeof(struct sockaddr_un);
-static struct sockaddr_un serv, clients[MAX_CLIENTS];
+unsigned int addrlen = sizeof(struct sockaddr_un);
+struct sockaddr_un serv, client;
 
 int create_socket()
 {
@@ -40,12 +40,9 @@ int connect_socket(int fd)
 	return connect(fd, (struct sockaddr *)&serv, (socklen_t)len);
 }
 
-int accept_socket(int fd) {
-	listen(fd, MAX_CLIENTS);
-	struct sockaddr_un local_client;
-	int cli_fd = accept(fd, (struct sockaddr *)&local_client, (socklen_t *)&addrlen);
-	clients[cli_fd] = local_client;
-	return cli_fd;
+int accept_socket(int fd, int max_clients) {
+	listen(fd, max_clients);
+	return accept(fd, (struct sockaddr *)&client, (socklen_t *)&addrlen);
 }
 
 ssize_t send_socket(int fd, const char *buf, size_t len)
