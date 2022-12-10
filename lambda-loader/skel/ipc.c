@@ -41,7 +41,7 @@ int connect_socket(int fd)
 }
 
 int accept_socket(int fd) {
-	listen(fd, 5);
+	listen(fd, MAX_CLIENTS);
 	struct sockaddr_un local_client;
 	int cli_fd = accept(fd, (struct sockaddr *)&local_client, (socklen_t *)&addrlen);
 	clients[cli_fd] = local_client;
