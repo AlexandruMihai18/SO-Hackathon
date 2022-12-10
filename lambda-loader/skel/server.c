@@ -6,17 +6,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/socket.h>
 
 #include "ipc.h"
 #include "server.h"
 
 #ifndef OUTPUTFILE_TEMPLATE
 #define OUTPUTFILE_TEMPLATE "../checker/output/out-XXXXXX"
-#endif
-
-#ifndef ERROR_MSG
-#define ERROR_MSG "Error: command could not be executed"
 #endif
 
 #ifndef MAX_SIZE
@@ -27,6 +22,7 @@
 #define RUN_FUNC "run"
 #endif
 
+int output_fd;
 char name[MAX_SIZE];
 char func[MAX_SIZE];
 char params[MAX_SIZE];
@@ -34,8 +30,11 @@ char message[MAX_SIZE];
 
 static int lib_prehooks(struct lib *lib)
 {
-	int fd = mkstemp(OUTPUTFILE_TEMPLATE);
-	
+	char *aux = strdup(OUTPUTFILE_TEMPLATE);
+	output_fd = mkstemp(aux);
+	dup2(output_fd, 1);
+	free(aux);
+
 	lib->outputfile = malloc(MAX_SIZE);
 	if (!lib->outputfile) {
 		perror("outputfile malloc failed\n");
@@ -43,36 +42,36 @@ static int lib_prehooks(struct lib *lib)
 	}
 
 	int ret;
-	ret = fcntl(fd, F_GETFD, lib->outputfile);
+	ret = fcntl(output_fd, F_GETFD, lib->outputfile);
 	if (ret == -1) {
 		perror("fcntl failed\n");
 		return -1;
 	}
 
-	close(fd);
-
 	lib->libname = malloc(MAX_SIZE);
-	strcpy(lib->libname, name);
+	strcpy(lib->libname, "../checker/");
+	strcat(lib->libname, name);
 
 	lib->funcname = malloc(MAX_SIZE);
-	if (func)
+	if (*func)
 		strcpy(lib->funcname, func);
 	else
 		strcpy(lib->funcname, RUN_FUNC);	
 
-	if (params) {
+	if (*params) {
 		lib->filename = malloc(MAX_SIZE);
 		strcpy(lib->filename, params);
 	}
-	else
+	else {
 		lib->filename = NULL;
+	}
 	return 0;
 }
 
 static int lib_load(struct lib *lib)
 {
 	lib->handle = dlopen(lib->libname, RTLD_LAZY);
-	if (lib->handle) {
+	if (!lib->handle) {
 		perror("dlopen failed\n");
 		return -1;
 	}
@@ -81,19 +80,15 @@ static int lib_load(struct lib *lib)
 
 static int lib_execute(struct lib *lib)
 {
-	int fd = open(lib->outputfile, O_RDWR);
-
 	if (!lib->filename) {
-		lib->run = (void (*)(void)) dlsym(lib->handle, lib->funcname);
+		lib->run = (lambda_func_t) dlsym(lib->handle, lib->funcname);
 		lib->run();
-		write(fd, lib->funcname, MAX_SIZE);
 	}
 	else {
-		lib->p_run = (void (*)(const char *)) dlsym(lib->handle, lib->funcname);
+		lib->p_run = (lambda_param_func_t) dlsym(lib->handle, lib->funcname);
 		lib->p_run(lib->filename);
 	}
 
-	close(fd);
 	return 0;
 }
 
@@ -114,7 +109,7 @@ static int lib_posthooks(struct lib *lib)
 	free(lib->funcname);
 	free(lib->filename);
 	free(lib->outputfile);
-	
+	close(output_fd);
 	return 0;
 }
 
