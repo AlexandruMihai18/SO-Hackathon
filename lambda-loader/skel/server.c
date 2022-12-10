@@ -28,41 +28,71 @@ char func[MAX_SIZE];
 char params[MAX_SIZE];
 char message[MAX_SIZE];
 
+void dealloc(struct lib *lib)
+{
+	free(lib->libname);
+	free(lib->funcname);
+	free(lib->filename);
+	free(lib->outputfile);
+	close(output_fd);
+}
+
 static int lib_prehooks(struct lib *lib)
 {
-	char *aux = strdup(OUTPUTFILE_TEMPLATE);
-	output_fd = mkstemp(aux);
+	lib->outputfile = strdup(OUTPUTFILE_TEMPLATE);
+	if (!lib->outputfile) {
+		perror("strdup failed\n");
+		return -1;
+	}
+
+	output_fd = mkstemp(lib->outputfile);
 	dup2(output_fd, 1);
 
-	lib->outputfile = aux;
-
 	lib->libname = malloc(MAX_SIZE);
+	if (!lib->libname) {
+		perror("malloc failed\n");
+		return -1;
+	}
+
 	strcpy(lib->libname, "../checker/");
 	strcat(lib->libname, name);
 
-	lib->funcname = malloc(MAX_SIZE);
-	if (*func)
-		strcpy(lib->funcname, func);
-	else
-		strcpy(lib->funcname, RUN_FUNC);	
-
-	if (*params) {
-		lib->filename = malloc(MAX_SIZE);
-		strcpy(lib->filename, params);
+	if (*func) {
+		lib->funcname = strdup(func);
 	}
 	else {
-		lib->filename = NULL;
+		lib->funcname = strdup(RUN_FUNC);
 	}
+	
+	if (!lib->funcname) {
+		perror("strdup failed\n");
+		return -1;
+	}
+
+	lib->filename = NULL;
+
+	if (*params) {
+		lib->filename = strdup(params);
+		if (!lib->filename) {
+			perror("strdup failed\n");
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
 static int lib_load(struct lib *lib)
 {
 	lib->handle = dlopen(lib->libname, RTLD_LAZY);
+
 	if (!lib->handle) {
+		printf("ceva\n");
 		perror("dlopen failed\n");
+		dealloc(lib);
 		return -1;
 	}
+
 	return 0;
 }
 
@@ -70,12 +100,22 @@ static int lib_execute(struct lib *lib)
 {
 	if (!lib->filename) {
 		lib->run = (lambda_func_t) dlsym(lib->handle, lib->funcname);
+		if (!lib->run) {
+			perror("dlsym failed\n");
+			return -1;
+		}
 		lib->run();
 	}
 	else {
 		lib->p_run = (lambda_param_func_t) dlsym(lib->handle, lib->funcname);
+		if (!lib->p_run) {
+			perror("dlsym failed\n");
+			return -1;
+		}
 		lib->p_run(lib->filename);
 	}
+
+	strcpy(message, lib->outputfile);
 
 	return 0;
 }
@@ -83,23 +123,17 @@ static int lib_execute(struct lib *lib)
 static int lib_close(struct lib *lib)
 {
 	int ret = dlclose(lib->handle);
+
 	if (ret) {
 		return -1;
 	}
+
 	return 0;
 }
 
 static int lib_posthooks(struct lib *lib)
 {
-	printf("%s\n", lib->outputfile);
-	strcpy(message, lib->outputfile);
-	printf("Message = Output file: %s\n", message);
-
-	free(lib->libname);
-	free(lib->funcname);
-	free(lib->filename);
-	free(lib->outputfile);
-	close(output_fd);
+	dealloc(lib);
 	return 0;
 }
 
@@ -178,6 +212,7 @@ int main(void)
 
 	/* TODO - handle request from client */
 	ret = lib_run(&lib);
+
 	if (ret == -1) {
 		strcpy(message, "Error: ");
 		strcat(message, buffer);
@@ -189,8 +224,6 @@ int main(void)
 		perror("send");
 		exit(1);
 	}
-
-	printf("Goodbye from fork!\n");
 
 	return 0;
 }
