@@ -24,31 +24,37 @@
 
 static int lib_prehooks(struct lib *lib)
 {
+	(void)lib;
 	return 0;
 }
 
 static int lib_load(struct lib *lib)
 {
+	(void)lib;
 	return 0;
 }
 
 static int lib_execute(struct lib *lib)
 {
+	(void)lib;
 	return 0;
 }
 
 static int lib_close(struct lib *lib)
 {
+	(void)lib;
 	return 0;
 }
 
 static int lib_posthooks(struct lib *lib)
 {
+	(void)lib;
 	return 0;
 }
 
 static int lib_run(struct lib *lib)
 {
+	(void)lib;
 	int err;
 
 	err = lib_prehooks(lib);
@@ -89,14 +95,6 @@ int main(void)
 		exit(1);
 	}
 
-	printf("%d\n", socket_fd);
-
-	socket_client = accept_socket(socket_fd);
-	if (socket_client == -1) {
-		perror("accept");
-		exit(1);
-	}
-
 	char buffer[MAX_SIZE];
 	char name[MAX_SIZE];
 	char func[MAX_SIZE];
@@ -104,10 +102,17 @@ int main(void)
 	char message[MAX_SIZE];
 
 	int argv;
+	(void)argv;
 
 	while(1) {
 
 		/* TODO - get message from client */
+		socket_client = accept_socket(socket_fd);
+		if (socket_client == -1) {
+			perror("accept");
+			exit(1);
+		}
+
 		ret = recv_socket(socket_client, buffer, MAX_SIZE);
 		if (ret == -1) {
 			perror("recv");
@@ -121,7 +126,10 @@ int main(void)
 
 		/* TODO - handle request from client */
 		ret = lib_run(&lib);
-		strcpy(message, ERROR_MSG);
+		// strcpy(message, ERROR_MSG);
+		strcpy(message, "Error: ");
+		strcat(message, buffer);
+		strcat(message, " could not be executed");
 
 		ret = send_socket(socket_client, message, MAX_SIZE);
 		if (ret == -1) {

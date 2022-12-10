@@ -42,9 +42,7 @@ int connect_socket(int fd)
 
 int accept_socket(int fd) {
 	listen(fd, 5);
-	printf("Inainte de accept\n");
 	return accept(fd, (struct sockaddr *)&cli, (socklen_t *)&addrlen);
-	printf("Dupa accept\n");
 }
 
 ssize_t send_socket(int fd, const char *buf, size_t len)
