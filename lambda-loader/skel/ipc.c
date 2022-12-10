@@ -10,8 +10,8 @@
 
 #define SOCKET_PATH "/tmp/mysocket"
 
-static unsigned int addrlen = sizeof(struct sockaddr_un);
-static struct sockaddr_un serv, clients[MAX_CLIENTS];
+unsigned int addrlen = sizeof(struct sockaddr_un);
+struct sockaddr_un serv, clients[MAX_CLIENTS];
 
 int create_socket()
 {

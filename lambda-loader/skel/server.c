@@ -91,9 +91,7 @@ static int lib_close(struct lib *lib)
 
 static int lib_posthooks(struct lib *lib)
 {
-	printf("%s\n", lib->outputfile);
 	strcpy(message, lib->outputfile);
-	printf("Message = Output file: %s\n", message);
 
 	free(lib->libname);
 	free(lib->funcname);
@@ -153,13 +151,7 @@ int main(void)
 	// listen for messages from client and create fork upon receiving request
 	while (1) {
 		socket_client = accept_socket(socket_fd);
-		printf("Connection request received...\n");
 		int pid = fork();
-		if (pid > 0) {
-			printf("Created a fork\n");
-		} else {
-			printf("Message from fork\n");
-		}
 		if (pid == 0) {
 			break;
 		}
@@ -170,8 +162,6 @@ int main(void)
 		perror("recv");
 		exit(1);
 	}
-
-	printf("Received message: %s\n", buffer);
 
 	/* TODO - parse message with parse_command and populate lib */
 	argv = parse_command(buffer, name, func, params);
@@ -189,8 +179,6 @@ int main(void)
 		perror("send");
 		exit(1);
 	}
-
-	printf("Goodbye from fork!\n");
 
 	return 0;
 }
