@@ -1,0 +1,7 @@
+/lambda-loader/skel/*.o
+/lambda-loader/skel/*.so
+/lambda-loader/skel/server
+
+/lambda-loader/checker/*.o
+/lambda-loader/checker/*.so
+/lambda-loader/checker/client

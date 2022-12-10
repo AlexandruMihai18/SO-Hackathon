@@ -5,23 +5,27 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/stat.h>
-#include <netinet/in.h>
 
 #include "ipc.h"
 
-static struct sockaddr_in addr;
-static struct sockaddr cli_addr;
-static unsigned short port = 4242;
+#define SOCKET_PATH "/home/andrei/mysocket"
+
+static unsigned int addrlen = sizeof(struct sockaddr_un);
+static struct sockaddr_un serv, cli;
 
 int create_socket()
 {
-	int fd = socket(AF_INET, SOCK_DGRAM, 0);
-	memset(&addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	addr.sin_addr.s_addr = INADDR_ANY;
-	int ret = bind(fd, (struct sockaddr*)&addr, sizeof(addr));
+	return socket(AF_UNIX, SOCK_STREAM, 0);
+}
+
+int create_server() {
+	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	memset(&serv, 0, sizeof(serv));
+	serv.sun_family = AF_UNIX;
+	strcpy(serv.sun_path, SOCKET_PATH);
+	unlink(serv.sun_path);
+	int len = strlen(serv.sun_path) + sizeof(serv.sun_family);
+	int ret = bind(fd, (struct sockaddr *)&serv, (socklen_t)len);
 	if (ret < 0) {
 		return -1;
 	}
@@ -30,10 +34,15 @@ int create_socket()
 
 int connect_socket(int fd)
 {
+	serv.sun_family = AF_UNIX;
+	strcpy(serv.sun_path, SOCKET_PATH);
+	int len = strlen(serv.sun_path) + sizeof(serv.sun_family);
+	return connect(fd, (struct sockaddr *)&serv, (socklen_t)len);
+}
+
+int accept_socket(int fd) {
 	listen(fd, 5);
-	int addrlen = sizeof(struct sockaddr);
-	return accept(fd, &cli_addr, &addrlen);
-	
+	return accept(fd, (struct sockaddr *)&cli, (socklen_t *)&addrlen);
 }
 
 ssize_t send_socket(int fd, const char *buf, size_t len)

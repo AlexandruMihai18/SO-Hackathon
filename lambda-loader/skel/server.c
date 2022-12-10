@@ -65,7 +65,6 @@ static int lib_prehooks(struct lib *lib)
 	}
 	else
 		lib->filename = NULL;
-
 	return 0;
 }
 
@@ -76,7 +75,6 @@ static int lib_load(struct lib *lib)
 		perror("dlopen failed\n");
 		return -1;
 	}
-
 	return 0;
 }
 
@@ -121,6 +119,7 @@ static int lib_posthooks(struct lib *lib)
 
 static int lib_run(struct lib *lib)
 {
+	(void)lib;
 	int err;
 
 	err = lib_prehooks(lib);
@@ -155,37 +154,44 @@ int main(void)
 	int socket_client;
 
 	/* TODO - Implement server connection */
-	int socket_fd = create_socket();
+	int socket_fd = create_server();
 	if (socket_fd == -1) {
 		perror("socket");
-		exit(1);
-	}
-
-	socket_client = connect_socket(socket_fd);
-	if (socket_client == -1) {
-		perror("accept");
 		exit(1);
 	}
 
 	char buffer[MAX_SIZE];
 
 	int argv;
+	(void)argv;
 
 	while (1) {
 
 		/* TODO - get message from client */
+		socket_client = accept_socket(socket_fd);
+		if (socket_client == -1) {
+			perror("accept");
+			exit(1);
+		}
+
 		ret = recv_socket(socket_client, buffer, MAX_SIZE);
 		if (ret == -1) {
 			perror("recv");
 			exit(1);
 		}
 
+		printf("Received message: %s\n", buffer);
+
 		/* TODO - parse message with parse_command and populate lib */
 		argv = parse_command(buffer, name, func, params);
 
 		/* TODO - handle request from client */
 		ret = lib_run(&lib);
-		
+    
+		// strcpy(message, ERROR_MSG);
+		strcpy(message, "Error: ");
+		strcat(message, buffer);
+		strcat(message, " could not be executed");
 
 		ret = send_socket(socket_client, message, MAX_SIZE);
 		if (ret == -1) {
