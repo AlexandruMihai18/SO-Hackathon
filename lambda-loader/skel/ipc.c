@@ -40,8 +40,8 @@ int connect_socket(int fd)
 	return connect(fd, (struct sockaddr *)&serv, (socklen_t)len);
 }
 
-int accept_socket(int fd, int max_clients) {
-	listen(fd, max_clients);
+int accept_socket(int fd) {
+	listen(fd, MAX_CLIENTS);
 	return accept(fd, (struct sockaddr *)&client, (socklen_t *)&addrlen);
 }
 
