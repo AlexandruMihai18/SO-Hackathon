@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-fPIC -Wall -Wextra
+CFLAGS=-fPIC -Wall -Wextra -g
 LDFLAGS=-ldl
 OUTPUT_DIR=$(abspath ../checker/output/)
 CFLAGS+=-DOUTPUT_TEMPLATE="\"$(OUTPUT_DIR)/out-XXXXXX\""

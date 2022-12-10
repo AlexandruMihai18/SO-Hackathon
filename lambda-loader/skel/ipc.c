@@ -8,7 +8,7 @@
 
 #include "ipc.h"
 
-#define SOCKET_PATH "/home/andrei/mysocket"
+#define SOCKET_PATH "/home/student/mysocket"
 
 static unsigned int addrlen = sizeof(struct sockaddr_un);
 static struct sockaddr_un serv, cli;
