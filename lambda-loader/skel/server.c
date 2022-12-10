@@ -33,20 +33,8 @@ static int lib_prehooks(struct lib *lib)
 	char *aux = strdup(OUTPUTFILE_TEMPLATE);
 	output_fd = mkstemp(aux);
 	dup2(output_fd, 1);
-	free(aux);
 
-	lib->outputfile = malloc(MAX_SIZE);
-	if (!lib->outputfile) {
-		perror("outputfile malloc failed\n");
-		return -1;
-	}
-
-	int ret;
-	ret = fcntl(output_fd, F_GETFD, lib->outputfile);
-	if (ret == -1) {
-		perror("fcntl failed\n");
-		return -1;
-	}
+	lib->outputfile = aux;
 
 	lib->libname = malloc(MAX_SIZE);
 	strcpy(lib->libname, "../checker/");
@@ -103,8 +91,10 @@ static int lib_close(struct lib *lib)
 
 static int lib_posthooks(struct lib *lib)
 {
+	printf("%s\n", lib->outputfile);
 	strcpy(message, lib->outputfile);
-	
+	printf("Message = Output file: %s\n", message);
+
 	free(lib->libname);
 	free(lib->funcname);
 	free(lib->filename);
