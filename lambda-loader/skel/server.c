@@ -26,6 +26,7 @@ int output_fd;
 char name[MAX_SIZE];
 char func[MAX_SIZE];
 char params[MAX_SIZE];
+char output_file[MAX_SIZE];
 char message[MAX_SIZE];
 
 void dealloc(struct lib *lib)
@@ -40,16 +41,17 @@ static int lib_prehooks(struct lib *lib)
 {
 	lib->outputfile = strdup(OUTPUTFILE_TEMPLATE);
 	if (!lib->outputfile) {
-		perror("strdup failed");
+		perror("strdup failed\n");
 		return -1;
 	}
 
 	output_fd = mkstemp(lib->outputfile);
 	dup2(output_fd, 1);
+	strcpy(output_file, lib->outputfile);
 
 	lib->libname = malloc(MAX_SIZE);
 	if (!lib->libname) {
-		perror("malloc failed");
+		perror("malloc failed\n");
 		return -1;
 	}
 
@@ -64,7 +66,7 @@ static int lib_prehooks(struct lib *lib)
 	}
 	
 	if (!lib->funcname) {
-		perror("strdup failed");
+		perror("strdup failed\n");
 		return -1;
 	}
 
@@ -100,7 +102,6 @@ static int lib_execute(struct lib *lib)
 		lib->run = (lambda_func_t) dlsym(lib->handle, lib->funcname);
 		if (!lib->run) {
 			perror("dlsym failed");
-			dealloc(lib);
 			return -1;
 		}
 		lib->run();
@@ -108,14 +109,11 @@ static int lib_execute(struct lib *lib)
 	else {
 		lib->p_run = (lambda_param_func_t) dlsym(lib->handle, lib->funcname);
 		if (!lib->p_run) {
-			perror("dlsym failed");
-			dealloc(lib);
+			perror("dlsym failed\n");
 			return -1;
 		}
 		lib->p_run(lib->filename);
 	}
-
-	strcpy(message, lib->outputfile);
 
 	return 0;
 }
@@ -134,6 +132,7 @@ static int lib_close(struct lib *lib)
 static int lib_posthooks(struct lib *lib)
 {
 	dealloc(lib);
+	close(output_fd);
 	return 0;
 }
 
@@ -216,10 +215,13 @@ int main(void)
 	if (ret == -1) {
 		strcpy(message, "Error: ");
 		strcat(message, buffer);
-		strcat(message, " could not be executed");
+		strcat(message, " could not be executed.");
+		
+		printf("%s\n", message);
+		close(output_fd);
 	}
 
-	ret = send_socket(socket_client, message, MAX_SIZE);
+	ret = send_socket(socket_client, output_file, MAX_SIZE);
 	if (ret == -1) {
 		perror("send");
 		exit(1);
