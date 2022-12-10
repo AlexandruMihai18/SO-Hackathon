@@ -183,11 +183,12 @@ int main(void)
 
 		/* TODO - handle request from client */
 		ret = lib_run(&lib);
-    
-		// strcpy(message, ERROR_MSG);
-		strcpy(message, "Error: ");
-		strcat(message, buffer);
-		strcat(message, " could not be executed");
+		if (ret == -1) {
+			// strcpy(message, ERROR_MSG);
+			strcpy(message, "Error: ");
+			strcat(message, buffer);
+			strcat(message, " could not be executed");
+		}	
 
 		ret = send_socket(socket_client, message, MAX_SIZE);
 		if (ret == -1) {
