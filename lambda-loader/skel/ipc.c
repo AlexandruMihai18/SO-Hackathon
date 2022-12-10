@@ -8,10 +8,10 @@
 
 #include "ipc.h"
 
-#define SOCKET_PATH "/home/andrei/mysocket"
+#define SOCKET_PATH "/tmp/mysocket"
 
 static unsigned int addrlen = sizeof(struct sockaddr_un);
-static struct sockaddr_un serv, cli;
+static struct sockaddr_un serv, clients[MAX_CLIENTS];
 
 int create_socket()
 {
@@ -19,7 +19,7 @@ int create_socket()
 }
 
 int create_server() {
-	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	int fd = create_socket();
 	memset(&serv, 0, sizeof(serv));
 	serv.sun_family = AF_UNIX;
 	strcpy(serv.sun_path, SOCKET_PATH);
@@ -42,7 +42,10 @@ int connect_socket(int fd)
 
 int accept_socket(int fd) {
 	listen(fd, 5);
-	return accept(fd, (struct sockaddr *)&cli, (socklen_t *)&addrlen);
+	struct sockaddr_un local_client;
+	int cli_fd = accept(fd, (struct sockaddr *)&local_client, (socklen_t *)&addrlen);
+	clients[cli_fd] = local_client;
+	return cli_fd;
 }
 
 ssize_t send_socket(int fd, const char *buf, size_t len)
